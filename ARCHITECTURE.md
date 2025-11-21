@@ -67,6 +67,45 @@ Receive Crash → Parse JSON → Calculate Fingerprint → Group Similar Crashes
                              - Error Message
 ```
 
+### 4. Complete System Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant MCU as Microcontroller
+    participant FW as GhostLog SDK
+    participant BE as Backend API
+    participant DB as SQLite DB
+    participant UI as React Dashboard
+
+    Note over MCU,FW: Crash occurs
+    MCU->>FW: ghostlog_capture_panic(msg)
+    FW->>FW: Store in RAM
+    FW->>FW: ghostlog_persist_to_flash()
+    
+    Note over MCU,FW: System reboots
+    MCU->>FW: ghostlog_init()
+    FW->>FW: Check for pending log
+    FW->>BE: HTTP POST /api/logs
+    BE->>BE: Generate fingerprint
+    BE->>DB: Store crash + device info
+    DB-->>BE: Success
+    BE-->>FW: Success response
+    FW->>FW: ghostlog_clear_log()
+    
+    Note over UI,BE: User opens dashboard
+    UI->>BE: GET /api/devices
+    BE->>DB: Query devices
+    DB-->>BE: Device list
+    BE-->>UI: JSON response
+    UI->>UI: Render device cards
+    
+    UI->>BE: GET /api/crashes/groups
+    BE->>DB: Query grouped crashes
+    DB-->>BE: Crash groups
+    BE-->>UI: JSON response
+    UI->>UI: Render crash groups
+```
+
 ---
 
 ## Firmware Integration
